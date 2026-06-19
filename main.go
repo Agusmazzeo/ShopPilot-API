@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/yourorg/shoppilot/app/config"
+	"github.com/yourorg/shoppilot/app/redis"
 	"github.com/yourorg/shoppilot/app/repositories"
 	_ "github.com/joho/godotenv/autoload"
 )
@@ -30,7 +31,15 @@ func main() {
 
 	log.Printf("Database connection established successfully")
 
-	// TODO: Initialize Redis
+	// Initialize Redis client
+	redisClient, err := redis.NewClient(&cfg.Redis)
+	if err != nil {
+		log.Fatalf("Failed to initialize Redis client: %v", err)
+	}
+	defer redisClient.Close()
+
+	log.Printf("Redis connection established successfully")
+
 	// TODO: Initialize services
 	// TODO: Start HTTP server
 
