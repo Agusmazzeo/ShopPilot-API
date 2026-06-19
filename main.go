@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/yourorg/shoppilot/app/config"
 	"github.com/yourorg/shoppilot/app/redis"
 	"github.com/yourorg/shoppilot/app/repositories"
+	"github.com/yourorg/shoppilot/internal/server"
 	_ "github.com/joho/godotenv/autoload"
 )
 
@@ -40,8 +40,12 @@ func main() {
 
 	log.Printf("Redis connection established successfully")
 
-	// TODO: Initialize services
-	// TODO: Start HTTP server
+	// Initialize and start server
+	srv := server.New(cfg, repoManager, redisClient)
 
-	os.Exit(0)
+	log.Printf("Starting HTTP server on %s:%d", cfg.Server.Host, cfg.Server.Port)
+
+	if err := srv.Start(); err != nil {
+		log.Fatalf("Server error: %v", err)
+	}
 }
