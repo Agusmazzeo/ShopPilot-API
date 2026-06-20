@@ -20,19 +20,9 @@ INSERT INTO user_status (name, description, is_active) VALUES
     ('INVITED', 'User has been invited but has not yet activated their account', true),
     ('SUSPENDED', 'User account has been suspended', true);
 
--- Create function to update updated_at timestamp
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-DROP FUNCTION IF EXISTS update_updated_at_column();
 DROP TABLE IF EXISTS user_status CASCADE;
 -- +goose StatementEnd

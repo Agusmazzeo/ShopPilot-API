@@ -1,5 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
+
 -- Create product_images table
 CREATE TABLE product_images (
     id SERIAL PRIMARY KEY,

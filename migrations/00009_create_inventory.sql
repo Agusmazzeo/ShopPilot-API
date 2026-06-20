@@ -1,5 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
+
 -- Create inventory table
 CREATE TABLE inventory (
     id SERIAL PRIMARY KEY,

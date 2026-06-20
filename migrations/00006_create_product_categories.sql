@@ -1,9 +1,11 @@
 -- +goose Up
 -- +goose StatementBegin
--- Create product_categories table
+
+-- Create product_categories table with multi-tenant support
 CREATE TABLE product_categories (
     id SERIAL PRIMARY KEY,
-    store_id INTEGER NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+    client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    shop_id INTEGER NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(255) NOT NULL,
     description TEXT,
@@ -12,11 +14,12 @@ CREATE TABLE product_categories (
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(store_id, slug)
+    UNIQUE(client_id, shop_id, slug)
 );
 
 -- Create indexes
-CREATE INDEX idx_product_categories_store_id ON product_categories(store_id);
+CREATE INDEX idx_product_categories_client_id ON product_categories(client_id);
+CREATE INDEX idx_product_categories_shop_id ON product_categories(shop_id);
 CREATE INDEX idx_product_categories_parent_id ON product_categories(parent_id);
 CREATE INDEX idx_product_categories_is_active ON product_categories(is_active);
 
