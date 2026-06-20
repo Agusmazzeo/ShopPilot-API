@@ -1,0 +1,25 @@
+# Ignore development files
+.git
+.gitignore
+.env
+.env.local
+settings/envVars.LOCAL
+
+# Ignore build artifacts
+bin/
+*.test
+*.out
+
+# Ignore documentation
+README.md
+*.md
+
+# Ignore IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignore test files
+*_test.go
+testdata/
