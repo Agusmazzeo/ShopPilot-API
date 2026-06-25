@@ -42,21 +42,20 @@ CREATE TRIGGER update_shops_updated_at BEFORE UPDATE ON shops
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Shop users (manages specific shops)
+-- Users must have a client_user_role to be assigned to shops
 CREATE TABLE shop_users (
     id SERIAL PRIMARY KEY,
     client_id UUID NOT NULL,
     shop_id UUID NOT NULL,
-    client_user_id UUID NOT NULL REFERENCES client_users(id) ON DELETE CASCADE,
-    role VARCHAR(50) NOT NULL DEFAULT 'staff',
+    client_user_role_id INTEGER NOT NULL REFERENCES client_user_roles(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     FOREIGN KEY (client_id, shop_id) REFERENCES shops(client_id, id) ON DELETE CASCADE,
-    UNIQUE(shop_id, client_user_id)
+    UNIQUE(shop_id, client_user_role_id)
 );
 
 CREATE INDEX idx_shop_users_shop ON shop_users(shop_id);
-CREATE INDEX idx_shop_users_client_user ON shop_users(client_user_id);
-CREATE INDEX idx_shop_users_role ON shop_users(role);
+CREATE INDEX idx_shop_users_client_user_role ON shop_users(client_user_role_id);
 
 CREATE TRIGGER update_shop_users_updated_at BEFORE UPDATE ON shop_users
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

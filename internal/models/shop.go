@@ -27,11 +27,10 @@ type Shop struct {
 }
 
 type ShopUser struct {
-	ID           int       `db:"id" json:"id"`
-	ClientID     uuid.UUID `db:"client_id" json:"clientId"`
-	ShopID       uuid.UUID `db:"shop_id" json:"shopId"`
-	ClientUserID uuid.UUID `db:"client_user_id" json:"clientUserId"`
-	Role         string    `db:"role" json:"role"`
-	CreatedAt    time.Time `db:"created_at" json:"createdAt"`
-	UpdatedAt    time.Time `db:"updated_at" json:"updatedAt"`
+	ID                int       `db:"id" json:"id"`
+	ClientID          uuid.UUID `db:"client_id" json:"clientId"`
+	ShopID            uuid.UUID `db:"shop_id" json:"shopId"`
+	ClientUserRoleID  int       `db:"client_user_role_id" json:"clientUserRoleId"`
+	CreatedAt         time.Time `db:"created_at" json:"createdAt"`
+	UpdatedAt         time.Time `db:"updated_at" json:"updatedAt"`
 }
