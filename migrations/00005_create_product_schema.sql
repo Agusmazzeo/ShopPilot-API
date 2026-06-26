@@ -1,11 +1,11 @@
 -- +goose Up
 -- +goose StatementBegin
 
--- Products table (partitioned by shop_id hash for scalability)
+-- Products table (partitioned by client_id hash for scalability)
 CREATE TABLE products (
     id UUID DEFAULT uuid_generate_v4(),
+    client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
     shop_id UUID NOT NULL,
-    client_id UUID NOT NULL,
     code VARCHAR(100) NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT DEFAULT '',
@@ -13,10 +13,10 @@ CREATE TABLE products (
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    PRIMARY KEY (shop_id, id),
+    PRIMARY KEY (client_id, id),
     FOREIGN KEY (client_id, shop_id) REFERENCES shops(client_id, id) ON DELETE CASCADE,
-    UNIQUE(shop_id, code)
-) PARTITION BY HASH (shop_id);
+    UNIQUE(client_id, code)
+) PARTITION BY HASH (client_id);
 
 -- Create 8 partitions for products
 CREATE TABLE products_p0 PARTITION OF products FOR VALUES WITH (MODULUS 8, REMAINDER 0);
@@ -30,7 +30,7 @@ CREATE TABLE products_p7 PARTITION OF products FOR VALUES WITH (MODULUS 8, REMAI
 
 CREATE INDEX idx_products_shop ON products(shop_id);
 CREATE INDEX idx_products_client ON products(client_id);
-CREATE INDEX idx_products_code ON products(shop_id, code);
+CREATE INDEX idx_products_code ON products(client_id, code);
 CREATE INDEX idx_products_name ON products(name);
 CREATE INDEX idx_products_is_active ON products(is_active);
 CREATE INDEX idx_products_metadata ON products USING GIN (metadata);
@@ -42,6 +42,7 @@ CREATE TRIGGER update_products_updated_at BEFORE UPDATE ON products
 -- Each product must have at least one variant
 CREATE TABLE product_variants (
     id UUID DEFAULT uuid_generate_v4(),
+    client_id UUID NOT NULL,
     shop_id UUID NOT NULL,
     product_id UUID NOT NULL,
     sku VARCHAR(100) NOT NULL,
@@ -58,10 +59,11 @@ CREATE TABLE product_variants (
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    PRIMARY KEY (shop_id, id),
-    FOREIGN KEY (shop_id, product_id) REFERENCES products(shop_id, id) ON DELETE CASCADE,
-    UNIQUE(shop_id, sku)
-) PARTITION BY HASH (shop_id);
+    PRIMARY KEY (client_id, id),
+    FOREIGN KEY (client_id, product_id) REFERENCES products(client_id, id) ON DELETE CASCADE,
+    FOREIGN KEY (client_id, shop_id) REFERENCES shops(client_id, id) ON DELETE CASCADE,
+    UNIQUE(client_id, sku)
+) PARTITION BY HASH (client_id);
 
 -- Create 8 partitions for product_variants
 CREATE TABLE product_variants_p0 PARTITION OF product_variants FOR VALUES WITH (MODULUS 8, REMAINDER 0);
@@ -74,8 +76,8 @@ CREATE TABLE product_variants_p6 PARTITION OF product_variants FOR VALUES WITH (
 CREATE TABLE product_variants_p7 PARTITION OF product_variants FOR VALUES WITH (MODULUS 8, REMAINDER 7);
 
 CREATE INDEX idx_product_variants_shop ON product_variants(shop_id);
-CREATE INDEX idx_product_variants_product ON product_variants(shop_id, product_id);
-CREATE INDEX idx_product_variants_sku ON product_variants(shop_id, sku);
+CREATE INDEX idx_product_variants_product ON product_variants(client_id, product_id);
+CREATE INDEX idx_product_variants_sku ON product_variants(client_id, sku);
 CREATE INDEX idx_product_variants_is_active ON product_variants(is_active);
 CREATE INDEX idx_product_variants_is_default ON product_variants(is_default);
 CREATE INDEX idx_product_variants_attributes ON product_variants USING GIN (attributes);

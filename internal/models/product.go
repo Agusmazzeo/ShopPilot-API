@@ -8,8 +8,8 @@ import (
 
 type Product struct {
 	ID          uuid.UUID              `db:"id" json:"id"`
-	ShopID      uuid.UUID              `db:"shop_id" json:"shopId"`
 	ClientID    uuid.UUID              `db:"client_id" json:"clientId"`
+	ShopID      uuid.UUID              `db:"shop_id" json:"shopId"`
 	Code        string                 `db:"code" json:"code"`
 	Name        string                 `db:"name" json:"name"`
 	Description string                 `db:"description" json:"description"`
@@ -21,6 +21,7 @@ type Product struct {
 
 type ProductVariant struct {
 	ID               uuid.UUID              `db:"id" json:"id"`
+	ClientID         uuid.UUID              `db:"client_id" json:"clientId"`
 	ShopID           uuid.UUID              `db:"shop_id" json:"shopId"`
 	ProductID        uuid.UUID              `db:"product_id" json:"productId"`
 	SKU              string                 `db:"sku" json:"sku"`

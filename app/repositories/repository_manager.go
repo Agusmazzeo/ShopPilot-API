@@ -12,10 +12,11 @@ import (
 type RepositoryManager struct {
 	pool *pgxpool.Pool
 
-	// TODO: Add repository instances as we create them
-	// Users    *UserRepository
-	// Products *ProductRepository
-	// etc.
+	PlatformUsers PlatformUserRepository
+	Clients       ClientRepository
+	ClientUsers   ClientUserRepository
+	Shops         ShopRepository
+	Products      ProductRepository
 }
 
 // NewRepositoryManager creates a new repository manager with database connection
@@ -33,12 +34,13 @@ func NewRepositoryManager(cfg *config.Config) (*RepositoryManager, error) {
 	}
 
 	rm := &RepositoryManager{
-		pool: pool,
+		pool:          pool,
+		PlatformUsers: NewPlatformUserRepository(pool),
+		Clients:       NewClientRepository(pool),
+		ClientUsers:   NewClientUserRepository(pool),
+		Shops:         NewShopRepository(pool),
+		Products:      NewProductRepository(pool),
 	}
-
-	// TODO: Initialize repositories here
-	// rm.Users = NewUserRepository(pool)
-	// rm.Products = NewProductRepository(pool)
 
 	return rm, nil
 }
