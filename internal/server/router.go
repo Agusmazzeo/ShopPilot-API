@@ -28,7 +28,23 @@ func (s *Server) setupRouter() http.Handler {
 	clientService := services.NewClientService(s.repoManager.Clients)
 	clientUserService := services.NewClientUserService(s.repoManager.ClientUsers)
 	shopService := services.NewShopService(s.repoManager.Shops, s.repoManager.Clients)
-	productService := services.NewProductService(s.repoManager.Products)
+	productService := services.NewProductService(
+		s.repoManager.Products,
+		s.repoManager.InventoryMovements,
+		s.repoManager.InventoryAlerts,
+	)
+	supplierService := services.NewSupplierService(s.repoManager.Suppliers)
+	customerService := services.NewCustomerService(s.repoManager.Customers)
+	purchaseOrderService := services.NewPurchaseOrderService(
+		s.repoManager.PurchaseOrders,
+		s.repoManager.Products,
+		s.repoManager.InventoryMovements,
+	)
+	salesOrderService := services.NewSalesOrderService(
+		s.repoManager.SalesOrders,
+		s.repoManager.Products,
+		s.repoManager.InventoryMovements,
+	)
 
 	// Initialize handlers
 	platformUserHandler := handlers.NewPlatformUserHandler(platformUserService)
@@ -36,6 +52,10 @@ func (s *Server) setupRouter() http.Handler {
 	clientUserHandler := handlers.NewClientUserHandler(clientUserService)
 	shopHandler := handlers.NewShopHandler(shopService)
 	productHandler := handlers.NewProductHandler(productService)
+	supplierHandler := handlers.NewSupplierHandler(supplierService)
+	customerHandler := handlers.NewCustomerHandler(customerService)
+	purchaseOrderHandler := handlers.NewPurchaseOrderHandler(purchaseOrderService)
+	salesOrderHandler := handlers.NewSalesOrderHandler(salesOrderService)
 
 	// API version 1
 	apiV1 := router.PathPrefix("/api/v1").Subrouter()
@@ -100,6 +120,54 @@ func (s *Server) setupRouter() http.Handler {
 	apiV1.HandleFunc("/clients/{clientId}/variants/{id}/inventory/adjust", productHandler.AdjustInventory).Methods("POST")
 	apiV1.HandleFunc("/clients/{clientId}/variants/{id}/inventory", productHandler.SetInventory).Methods("PUT")
 	apiV1.HandleFunc("/clients/{clientId}/variants/{id}/inventory", productHandler.CheckStock).Methods("GET")
+
+	// Enhanced inventory routes
+	apiV1.HandleFunc("/clients/{clientId}/variants/{id}/movements", productHandler.GetMovements).Methods("GET")
+	apiV1.HandleFunc("/clients/{clientId}/variants/{id}/movements", productHandler.RecordMovement).Methods("POST")
+	apiV1.HandleFunc("/clients/{clientId}/variants/{id}/alerts", productHandler.SetAlert).Methods("PUT")
+	apiV1.HandleFunc("/clients/{clientId}/variants/{id}/alerts", productHandler.GetAlert).Methods("GET")
+	apiV1.HandleFunc("/clients/{clientId}/shops/{shopId}/low-stock", productHandler.GetLowStock).Methods("GET")
+
+	// Supplier routes
+	apiV1.HandleFunc("/clients/{clientId}/suppliers", supplierHandler.Create).Methods("POST")
+	apiV1.HandleFunc("/clients/{clientId}/suppliers/{id}", supplierHandler.Get).Methods("GET")
+	apiV1.HandleFunc("/clients/{clientId}/suppliers/{id}", supplierHandler.Update).Methods("PUT")
+	apiV1.HandleFunc("/clients/{clientId}/suppliers/{id}", supplierHandler.Delete).Methods("DELETE")
+	apiV1.HandleFunc("/clients/{clientId}/suppliers", supplierHandler.List).Methods("GET")
+
+	// Customer routes
+	apiV1.HandleFunc("/clients/{clientId}/customers", customerHandler.Create).Methods("POST")
+	apiV1.HandleFunc("/clients/{clientId}/customers/{id}", customerHandler.Get).Methods("GET")
+	apiV1.HandleFunc("/clients/{clientId}/customers/{id}", customerHandler.Update).Methods("PUT")
+	apiV1.HandleFunc("/clients/{clientId}/customers/{id}", customerHandler.Delete).Methods("DELETE")
+	apiV1.HandleFunc("/clients/{clientId}/customers", customerHandler.List).Methods("GET")
+	apiV1.HandleFunc("/clients/{clientId}/customers/search", customerHandler.Search).Methods("GET")
+
+	// Purchase Order routes
+	apiV1.HandleFunc("/clients/{clientId}/purchase-orders", purchaseOrderHandler.Create).Methods("POST")
+	apiV1.HandleFunc("/clients/{clientId}/purchase-orders/{id}", purchaseOrderHandler.Get).Methods("GET")
+	apiV1.HandleFunc("/clients/{clientId}/purchase-orders/{id}", purchaseOrderHandler.Update).Methods("PUT")
+	apiV1.HandleFunc("/clients/{clientId}/purchase-orders/{id}", purchaseOrderHandler.Delete).Methods("DELETE")
+	apiV1.HandleFunc("/clients/{clientId}/purchase-orders", purchaseOrderHandler.List).Methods("GET")
+	apiV1.HandleFunc("/clients/{clientId}/purchase-orders/{id}/submit", purchaseOrderHandler.Submit).Methods("POST")
+	apiV1.HandleFunc("/clients/{clientId}/purchase-orders/{id}/cancel", purchaseOrderHandler.Cancel).Methods("POST")
+	apiV1.HandleFunc("/clients/{clientId}/purchase-orders/{id}/items", purchaseOrderHandler.AddItem).Methods("POST")
+	apiV1.HandleFunc("/clients/{clientId}/purchase-orders/{id}/items/{itemId}", purchaseOrderHandler.RemoveItem).Methods("DELETE")
+	apiV1.HandleFunc("/clients/{clientId}/purchase-orders/{id}/items", purchaseOrderHandler.ListItems).Methods("GET")
+	apiV1.HandleFunc("/clients/{clientId}/purchase-orders/{id}/receive", purchaseOrderHandler.Receive).Methods("POST")
+
+	// Sales Order routes
+	apiV1.HandleFunc("/clients/{clientId}/sales-orders", salesOrderHandler.Create).Methods("POST")
+	apiV1.HandleFunc("/clients/{clientId}/sales-orders/{id}", salesOrderHandler.Get).Methods("GET")
+	apiV1.HandleFunc("/clients/{clientId}/sales-orders/{id}", salesOrderHandler.Update).Methods("PUT")
+	apiV1.HandleFunc("/clients/{clientId}/sales-orders/{id}", salesOrderHandler.Delete).Methods("DELETE")
+	apiV1.HandleFunc("/clients/{clientId}/sales-orders", salesOrderHandler.List).Methods("GET")
+	apiV1.HandleFunc("/clients/{clientId}/sales-orders/{id}/confirm", salesOrderHandler.Confirm).Methods("POST")
+	apiV1.HandleFunc("/clients/{clientId}/sales-orders/{id}/cancel", salesOrderHandler.Cancel).Methods("POST")
+	apiV1.HandleFunc("/clients/{clientId}/sales-orders/{id}/items", salesOrderHandler.AddItem).Methods("POST")
+	apiV1.HandleFunc("/clients/{clientId}/sales-orders/{id}/items/{itemId}", salesOrderHandler.RemoveItem).Methods("DELETE")
+	apiV1.HandleFunc("/clients/{clientId}/sales-orders/{id}/items", salesOrderHandler.ListItems).Methods("GET")
+	apiV1.HandleFunc("/clients/{clientId}/sales-orders/{id}/fulfill", salesOrderHandler.Fulfill).Methods("POST")
 
 	// Root endpoint
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

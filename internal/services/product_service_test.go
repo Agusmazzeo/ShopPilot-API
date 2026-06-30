@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/yourorg/shoppilot/internal/models"
+	"github.com/yourorg/shoppilot/internal/services/fakes"
 )
 
 // MockProductRepository is a mock implementation of ProductRepository
@@ -127,7 +128,7 @@ func (m *MockProductRepository) UpdateInventory(ctx context.Context, clientID uu
 
 func TestProductService_CreateProduct_Success(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	service := NewProductService(mockRepo, nil, nil)
 
 	clientID := uuid.New()
 	shopID := uuid.New()
@@ -160,7 +161,7 @@ func TestProductService_CreateProduct_Success(t *testing.T) {
 
 func TestProductService_CreateProduct_DuplicateCode(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	service := NewProductService(mockRepo, nil, nil)
 
 	clientID := uuid.New()
 	shopID := uuid.New()
@@ -194,7 +195,7 @@ func TestProductService_CreateProduct_DuplicateCode(t *testing.T) {
 
 func TestProductService_GetProduct_Success(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	service := NewProductService(mockRepo, nil, nil)
 
 	clientID := uuid.New()
 	productID := uuid.New()
@@ -221,7 +222,7 @@ func TestProductService_GetProduct_Success(t *testing.T) {
 
 func TestProductService_UpdateProduct_Success(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	service := NewProductService(mockRepo, nil, nil)
 
 	clientID := uuid.New()
 	productID := uuid.New()
@@ -256,7 +257,7 @@ func TestProductService_UpdateProduct_Success(t *testing.T) {
 
 func TestProductService_DeleteProduct_Success(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	service := NewProductService(mockRepo, nil, nil)
 
 	clientID := uuid.New()
 	productID := uuid.New()
@@ -274,7 +275,7 @@ func TestProductService_DeleteProduct_Success(t *testing.T) {
 
 func TestProductService_ListProducts_ByShop(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	service := NewProductService(mockRepo, nil, nil)
 
 	clientID := uuid.New()
 	shopID := uuid.New()
@@ -297,7 +298,7 @@ func TestProductService_ListProducts_ByShop(t *testing.T) {
 
 func TestProductService_ListProducts_ByClient(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	service := NewProductService(mockRepo, nil, nil)
 
 	clientID := uuid.New()
 
@@ -321,7 +322,7 @@ func TestProductService_ListProducts_ByClient(t *testing.T) {
 
 func TestProductService_SearchProducts_Success(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	service := NewProductService(mockRepo, nil, nil)
 
 	clientID := uuid.New()
 	query := "test"
@@ -345,7 +346,7 @@ func TestProductService_SearchProducts_Success(t *testing.T) {
 
 func TestProductService_CreateVariant_Success(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	service := NewProductService(mockRepo, nil, nil)
 
 	clientID := uuid.New()
 	shopID := uuid.New()
@@ -388,7 +389,7 @@ func TestProductService_CreateVariant_Success(t *testing.T) {
 
 func TestProductService_CreateVariant_DuplicateSKU(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	service := NewProductService(mockRepo, nil, nil)
 
 	clientID := uuid.New()
 	productID := uuid.New()
@@ -428,7 +429,7 @@ func TestProductService_CreateVariant_DuplicateSKU(t *testing.T) {
 
 func TestProductService_CreateVariant_WithDefaultUnsetsPrevious(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	service := NewProductService(mockRepo, nil, nil)
 
 	clientID := uuid.New()
 	shopID := uuid.New()
@@ -490,7 +491,7 @@ func TestProductService_CreateVariant_WithDefaultUnsetsPrevious(t *testing.T) {
 
 func TestProductService_UpdateVariant_Success(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	service := NewProductService(mockRepo, nil, nil)
 
 	clientID := uuid.New()
 	variantID := uuid.New()
@@ -525,7 +526,7 @@ func TestProductService_UpdateVariant_Success(t *testing.T) {
 
 func TestProductService_UpdateVariant_NegativeInventory(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	service := NewProductService(mockRepo, nil, nil)
 
 	clientID := uuid.New()
 	variantID := uuid.New()
@@ -553,7 +554,7 @@ func TestProductService_UpdateVariant_NegativeInventory(t *testing.T) {
 
 func TestProductService_UpdateVariant_SetDefaultUnsetsPrevious(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	service := NewProductService(mockRepo, nil, nil)
 
 	clientID := uuid.New()
 	productID := uuid.New()
@@ -602,7 +603,7 @@ func TestProductService_UpdateVariant_SetDefaultUnsetsPrevious(t *testing.T) {
 
 func TestProductService_DeleteVariant_Success(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	service := NewProductService(mockRepo, nil, nil)
 
 	clientID := uuid.New()
 	productID := uuid.New()
@@ -638,7 +639,7 @@ func TestProductService_DeleteVariant_Success(t *testing.T) {
 
 func TestProductService_DeleteVariant_LastVariant(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	service := NewProductService(mockRepo, nil, nil)
 
 	clientID := uuid.New()
 	productID := uuid.New()
@@ -672,7 +673,7 @@ func TestProductService_DeleteVariant_LastVariant(t *testing.T) {
 
 func TestProductService_ListVariants_Success(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	service := NewProductService(mockRepo, nil, nil)
 
 	clientID := uuid.New()
 	productID := uuid.New()
@@ -704,14 +705,17 @@ func TestProductService_ListVariants_Success(t *testing.T) {
 
 func TestProductService_AdjustInventory_Increase(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	fakeMovementRepo := &fakes.FakeInventoryMovementRepository{}
+	service := NewProductService(mockRepo, fakeMovementRepo, nil)
 
 	clientID := uuid.New()
 	variantID := uuid.New()
+	shopID := uuid.New()
 
 	variant := &models.ProductVariant{
 		ID:       variantID,
 		ClientID: clientID,
+		ShopID:   shopID,
 		Quantity: 10,
 	}
 
@@ -721,22 +725,28 @@ func TestProductService_AdjustInventory_Increase(t *testing.T) {
 	mockRepo.On("UpdateInventory", mock.Anything, clientID, variantID, 15).
 		Return(nil)
 
+	fakeMovementRepo.CreateReturns(nil)
+
 	err := service.AdjustInventory(context.Background(), clientID, variantID, 5)
 
 	assert.NoError(t, err)
+	assert.Equal(t, 1, fakeMovementRepo.CreateCallCount())
 	mockRepo.AssertExpectations(t)
 }
 
 func TestProductService_AdjustInventory_Decrease(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	fakeMovementRepo := &fakes.FakeInventoryMovementRepository{}
+	service := NewProductService(mockRepo, fakeMovementRepo, nil)
 
 	clientID := uuid.New()
 	variantID := uuid.New()
+	shopID := uuid.New()
 
 	variant := &models.ProductVariant{
 		ID:       variantID,
 		ClientID: clientID,
+		ShopID:   shopID,
 		Quantity: 10,
 	}
 
@@ -746,15 +756,18 @@ func TestProductService_AdjustInventory_Decrease(t *testing.T) {
 	mockRepo.On("UpdateInventory", mock.Anything, clientID, variantID, 5).
 		Return(nil)
 
+	fakeMovementRepo.CreateReturns(nil)
+
 	err := service.AdjustInventory(context.Background(), clientID, variantID, -5)
 
 	assert.NoError(t, err)
+	assert.Equal(t, 1, fakeMovementRepo.CreateCallCount())
 	mockRepo.AssertExpectations(t)
 }
 
 func TestProductService_AdjustInventory_Negative(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	service := NewProductService(mockRepo, nil, nil)
 
 	clientID := uuid.New()
 	variantID := uuid.New()
@@ -779,23 +792,36 @@ func TestProductService_AdjustInventory_Negative(t *testing.T) {
 
 func TestProductService_SetInventory_Success(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	fakeMovementRepo := &fakes.FakeInventoryMovementRepository{}
+	service := NewProductService(mockRepo, fakeMovementRepo, nil)
 
 	clientID := uuid.New()
 	variantID := uuid.New()
+	shopID := uuid.New()
 
+	variant := &models.ProductVariant{
+		ID:       variantID,
+		ClientID: clientID,
+		ShopID:   shopID,
+		Quantity: 50,
+	}
+
+	mockRepo.On("GetVariantByID", mock.Anything, clientID, variantID).
+		Return(variant, nil)
 	mockRepo.On("UpdateInventory", mock.Anything, clientID, variantID, 100).
 		Return(nil)
+	fakeMovementRepo.CreateReturns(nil)
 
 	err := service.SetInventory(context.Background(), clientID, variantID, 100)
 
 	assert.NoError(t, err)
+	assert.Equal(t, 1, fakeMovementRepo.CreateCallCount())
 	mockRepo.AssertExpectations(t)
 }
 
 func TestProductService_SetInventory_Negative(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	service := NewProductService(mockRepo, nil, nil)
 
 	clientID := uuid.New()
 	variantID := uuid.New()
@@ -811,7 +837,7 @@ func TestProductService_SetInventory_Negative(t *testing.T) {
 
 func TestProductService_CheckStock_Success(t *testing.T) {
 	mockRepo := new(MockProductRepository)
-	service := NewProductService(mockRepo)
+	service := NewProductService(mockRepo, nil, nil)
 
 	clientID := uuid.New()
 	variantID := uuid.New()

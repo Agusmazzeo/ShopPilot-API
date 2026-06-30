@@ -12,11 +12,17 @@ import (
 type RepositoryManager struct {
 	pool *pgxpool.Pool
 
-	PlatformUsers PlatformUserRepository
-	Clients       ClientRepository
-	ClientUsers   ClientUserRepository
-	Shops         ShopRepository
-	Products      ProductRepository
+	PlatformUsers      PlatformUserRepository
+	Clients            ClientRepository
+	ClientUsers        ClientUserRepository
+	Shops              ShopRepository
+	Products           ProductRepository
+	Suppliers          SupplierRepository
+	Customers          CustomerRepository
+	PurchaseOrders     PurchaseOrderRepository
+	SalesOrders        SalesOrderRepository
+	InventoryMovements InventoryMovementRepository
+	InventoryAlerts    InventoryAlertRepository
 }
 
 // NewRepositoryManager creates a new repository manager with database connection
@@ -34,12 +40,18 @@ func NewRepositoryManager(cfg *config.Config) (*RepositoryManager, error) {
 	}
 
 	rm := &RepositoryManager{
-		pool:          pool,
-		PlatformUsers: NewPlatformUserRepository(pool),
-		Clients:       NewClientRepository(pool),
-		ClientUsers:   NewClientUserRepository(pool),
-		Shops:         NewShopRepository(pool),
-		Products:      NewProductRepository(pool),
+		pool:               pool,
+		PlatformUsers:      NewPlatformUserRepository(pool),
+		Clients:            NewClientRepository(pool),
+		ClientUsers:        NewClientUserRepository(pool),
+		Shops:              NewShopRepository(pool),
+		Products:           NewProductRepository(pool),
+		Suppliers:          NewSupplierRepository(pool),
+		Customers:          NewCustomerRepository(pool),
+		PurchaseOrders:     NewPurchaseOrderRepository(pool),
+		SalesOrders:        NewSalesOrderRepository(pool),
+		InventoryMovements: NewInventoryMovementRepository(pool),
+		InventoryAlerts:    NewInventoryAlertRepository(pool),
 	}
 
 	return rm, nil

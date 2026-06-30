@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/yourorg/shoppilot/internal/models"
 	"github.com/yourorg/shoppilot/internal/services"
 )
 
@@ -75,6 +76,23 @@ type AdjustInventoryRequestDTO struct {
 
 type SetInventoryRequestDTO struct {
 	Quantity int `json:"quantity"`
+}
+
+type RecordMovementRequestDTO struct {
+	ShopID        string  `json:"shopId"`
+	MovementType  string  `json:"movementType"`
+	Quantity      int     `json:"quantity"`
+	ReferenceType string  `json:"referenceType,omitempty"`
+	ReferenceID   *string `json:"referenceId,omitempty"`
+	Notes         string  `json:"notes,omitempty"`
+	PerformedBy   *string `json:"performedBy,omitempty"`
+}
+
+type SetInventoryAlertRequestDTO struct {
+	ReorderPoint      int  `json:"reorderPoint"`
+	ReorderQuantity   int  `json:"reorderQuantity"`
+	LowStockThreshold int  `json:"lowStockThreshold"`
+	IsEnabled         bool `json:"isEnabled"`
 }
 
 // Product handlers
@@ -574,6 +592,249 @@ func (h *ProductHandler) CheckStock(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, APIResponse{
 		Success: true,
 		Data:    map[string]int{"quantity": quantity},
+	})
+}
+
+// Inventory movement handlers
+
+// GetMovements handles GET /api/v1/clients/:clientId/variants/:id/movements
+func (h *ProductHandler) GetMovements(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clientID, err := uuid.Parse(vars["clientId"])
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		return
+	}
+
+	variantID, err := uuid.Parse(vars["id"])
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_VARIANT_ID", "Invalid variant ID format")
+		return
+	}
+
+	// Parse pagination parameters
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("pageSize"))
+	if pageSize < 1 {
+		pageSize = 20
+	}
+
+	movements, total, err := h.service.GetMovementHistory(r.Context(), clientID, variantID, page, pageSize)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "GET_MOVEMENTS_FAILED", err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"movements":  movements,
+			"pagination": map[string]int{"page": page, "pageSize": pageSize, "total": total},
+		},
+	})
+}
+
+// RecordMovement handles POST /api/v1/clients/:clientId/variants/:id/movements
+func (h *ProductHandler) RecordMovement(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clientID, err := uuid.Parse(vars["clientId"])
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		return
+	}
+
+	variantID, err := uuid.Parse(vars["id"])
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_VARIANT_ID", "Invalid variant ID format")
+		return
+	}
+
+	var dto RecordMovementRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "Invalid request body")
+		return
+	}
+
+	// Validate required fields
+	if dto.ShopID == "" || dto.MovementType == "" {
+		writeError(w, http.StatusBadRequest, "MISSING_FIELDS", "Shop ID and movement type are required")
+		return
+	}
+
+	shopID, err := uuid.Parse(dto.ShopID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_SHOP_ID", "Invalid shop ID format")
+		return
+	}
+
+	// Parse optional UUID fields
+	var referenceID *uuid.UUID
+	if dto.ReferenceID != nil && *dto.ReferenceID != "" {
+		refID, err := uuid.Parse(*dto.ReferenceID)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "INVALID_REFERENCE_ID", "Invalid reference ID format")
+			return
+		}
+		referenceID = &refID
+	}
+
+	var performedBy *uuid.UUID
+	if dto.PerformedBy != nil && *dto.PerformedBy != "" {
+		perfID, err := uuid.Parse(*dto.PerformedBy)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "INVALID_PERFORMED_BY", "Invalid performed by ID format")
+			return
+		}
+		performedBy = &perfID
+	}
+
+	req := &services.RecordMovementRequest{
+		ClientID:      clientID,
+		VariantID:     variantID,
+		ShopID:        shopID,
+		MovementType:  models.InventoryMovementType(dto.MovementType),
+		Quantity:      dto.Quantity,
+		ReferenceType: dto.ReferenceType,
+		ReferenceID:   referenceID,
+		Notes:         dto.Notes,
+		PerformedBy:   performedBy,
+	}
+
+	movement, err := h.service.RecordMovement(r.Context(), req)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "RECORD_MOVEMENT_FAILED", err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, APIResponse{
+		Success: true,
+		Data:    movement,
+	})
+}
+
+// Inventory alert handlers
+
+// SetAlert handles PUT /api/v1/clients/:clientId/variants/:id/alerts
+func (h *ProductHandler) SetAlert(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clientID, err := uuid.Parse(vars["clientId"])
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		return
+	}
+
+	variantID, err := uuid.Parse(vars["id"])
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_VARIANT_ID", "Invalid variant ID format")
+		return
+	}
+
+	// Get shopID from query parameter
+	shopIDStr := r.URL.Query().Get("shopId")
+	if shopIDStr == "" {
+		writeError(w, http.StatusBadRequest, "MISSING_SHOP_ID", "Shop ID query parameter is required")
+		return
+	}
+
+	shopID, err := uuid.Parse(shopIDStr)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_SHOP_ID", "Invalid shop ID format")
+		return
+	}
+
+	var dto SetInventoryAlertRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "Invalid request body")
+		return
+	}
+
+	req := &services.SetInventoryAlertRequest{
+		ReorderPoint:      dto.ReorderPoint,
+		ReorderQuantity:   dto.ReorderQuantity,
+		LowStockThreshold: dto.LowStockThreshold,
+		IsEnabled:         dto.IsEnabled,
+	}
+
+	alert, err := h.service.SetInventoryAlert(r.Context(), clientID, variantID, shopID, req)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "SET_ALERT_FAILED", err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Success: true,
+		Data:    alert,
+	})
+}
+
+// GetAlert handles GET /api/v1/clients/:clientId/variants/:id/alerts
+func (h *ProductHandler) GetAlert(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clientID, err := uuid.Parse(vars["clientId"])
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		return
+	}
+
+	variantID, err := uuid.Parse(vars["id"])
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_VARIANT_ID", "Invalid variant ID format")
+		return
+	}
+
+	// Get shopID from query parameter
+	shopIDStr := r.URL.Query().Get("shopId")
+	if shopIDStr == "" {
+		writeError(w, http.StatusBadRequest, "MISSING_SHOP_ID", "Shop ID query parameter is required")
+		return
+	}
+
+	shopID, err := uuid.Parse(shopIDStr)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_SHOP_ID", "Invalid shop ID format")
+		return
+	}
+
+	alert, err := h.service.GetInventoryAlert(r.Context(), clientID, variantID, shopID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "ALERT_NOT_FOUND", err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Success: true,
+		Data:    alert,
+	})
+}
+
+// GetLowStock handles GET /api/v1/clients/:clientId/shops/:shopId/low-stock
+func (h *ProductHandler) GetLowStock(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clientID, err := uuid.Parse(vars["clientId"])
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		return
+	}
+
+	shopID, err := uuid.Parse(vars["shopId"])
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_SHOP_ID", "Invalid shop ID format")
+		return
+	}
+
+	alerts, err := h.service.CheckLowStockAlerts(r.Context(), clientID, shopID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "LOW_STOCK_CHECK_FAILED", err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Success: true,
+		Data:    map[string]interface{}{"alerts": alerts},
 	})
 }
 

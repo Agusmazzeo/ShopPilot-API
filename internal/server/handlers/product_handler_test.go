@@ -31,6 +31,11 @@ type mockProductService struct {
 	adjustInventoryFunc    func(ctx context.Context, clientID uuid.UUID, variantID uuid.UUID, delta int) error
 	setInventoryFunc       func(ctx context.Context, clientID uuid.UUID, variantID uuid.UUID, quantity int) error
 	checkStockFunc         func(ctx context.Context, clientID uuid.UUID, variantID uuid.UUID) (int, error)
+	recordMovementFunc     func(ctx context.Context, req *services.RecordMovementRequest) (*models.InventoryMovement, error)
+	getMovementHistoryFunc func(ctx context.Context, clientID uuid.UUID, variantID uuid.UUID, page, pageSize int) ([]*models.InventoryMovement, int, error)
+	setInventoryAlertFunc  func(ctx context.Context, clientID uuid.UUID, variantID uuid.UUID, shopID uuid.UUID, req *services.SetInventoryAlertRequest) (*models.InventoryAlert, error)
+	getInventoryAlertFunc  func(ctx context.Context, clientID uuid.UUID, variantID uuid.UUID, shopID uuid.UUID) (*models.InventoryAlert, error)
+	checkLowStockAlertsFunc func(ctx context.Context, clientID uuid.UUID, shopID uuid.UUID) ([]*models.InventoryAlert, error)
 }
 
 func (m *mockProductService) CreateProduct(ctx context.Context, req *services.CreateProductRequest) (*models.Product, error) {
@@ -87,6 +92,41 @@ func (m *mockProductService) SetInventory(ctx context.Context, clientID uuid.UUI
 
 func (m *mockProductService) CheckStock(ctx context.Context, clientID uuid.UUID, variantID uuid.UUID) (int, error) {
 	return m.checkStockFunc(ctx, clientID, variantID)
+}
+
+func (m *mockProductService) RecordMovement(ctx context.Context, req *services.RecordMovementRequest) (*models.InventoryMovement, error) {
+	if m.recordMovementFunc != nil {
+		return m.recordMovementFunc(ctx, req)
+	}
+	return nil, nil
+}
+
+func (m *mockProductService) GetMovementHistory(ctx context.Context, clientID uuid.UUID, variantID uuid.UUID, page, pageSize int) ([]*models.InventoryMovement, int, error) {
+	if m.getMovementHistoryFunc != nil {
+		return m.getMovementHistoryFunc(ctx, clientID, variantID, page, pageSize)
+	}
+	return nil, 0, nil
+}
+
+func (m *mockProductService) SetInventoryAlert(ctx context.Context, clientID uuid.UUID, variantID uuid.UUID, shopID uuid.UUID, req *services.SetInventoryAlertRequest) (*models.InventoryAlert, error) {
+	if m.setInventoryAlertFunc != nil {
+		return m.setInventoryAlertFunc(ctx, clientID, variantID, shopID, req)
+	}
+	return nil, nil
+}
+
+func (m *mockProductService) GetInventoryAlert(ctx context.Context, clientID uuid.UUID, variantID uuid.UUID, shopID uuid.UUID) (*models.InventoryAlert, error) {
+	if m.getInventoryAlertFunc != nil {
+		return m.getInventoryAlertFunc(ctx, clientID, variantID, shopID)
+	}
+	return nil, nil
+}
+
+func (m *mockProductService) CheckLowStockAlerts(ctx context.Context, clientID uuid.UUID, shopID uuid.UUID) ([]*models.InventoryAlert, error) {
+	if m.checkLowStockAlertsFunc != nil {
+		return m.checkLowStockAlertsFunc(ctx, clientID, shopID)
+	}
+	return nil, nil
 }
 
 // Helper functions

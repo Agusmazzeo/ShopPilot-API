@@ -30,17 +30,34 @@ type ProductService interface {
 	AdjustInventory(ctx context.Context, clientID uuid.UUID, variantID uuid.UUID, delta int) error
 	SetInventory(ctx context.Context, clientID uuid.UUID, variantID uuid.UUID, quantity int) error
 	CheckStock(ctx context.Context, clientID uuid.UUID, variantID uuid.UUID) (int, error)
+
+	// Inventory movements
+	RecordMovement(ctx context.Context, req *RecordMovementRequest) (*models.InventoryMovement, error)
+	GetMovementHistory(ctx context.Context, clientID uuid.UUID, variantID uuid.UUID, page, pageSize int) ([]*models.InventoryMovement, int, error)
+
+	// Inventory alerts
+	SetInventoryAlert(ctx context.Context, clientID uuid.UUID, variantID uuid.UUID, shopID uuid.UUID, req *SetInventoryAlertRequest) (*models.InventoryAlert, error)
+	GetInventoryAlert(ctx context.Context, clientID uuid.UUID, variantID uuid.UUID, shopID uuid.UUID) (*models.InventoryAlert, error)
+	CheckLowStockAlerts(ctx context.Context, clientID uuid.UUID, shopID uuid.UUID) ([]*models.InventoryAlert, error)
 }
 
 // productService implements ProductService interface
 type productService struct {
-	repo repositories.ProductRepository
+	repo         repositories.ProductRepository
+	movementRepo repositories.InventoryMovementRepository
+	alertRepo    repositories.InventoryAlertRepository
 }
 
 // NewProductService creates a new product service
-func NewProductService(repo repositories.ProductRepository) ProductService {
+func NewProductService(
+	repo repositories.ProductRepository,
+	movementRepo repositories.InventoryMovementRepository,
+	alertRepo repositories.InventoryAlertRepository,
+) ProductService {
 	return &productService{
-		repo: repo,
+		repo:         repo,
+		movementRepo: movementRepo,
+		alertRepo:    alertRepo,
 	}
 }
 
@@ -399,6 +416,7 @@ func (s *productService) ListVariants(ctx context.Context, clientID uuid.UUID, p
 
 // AdjustInventory adjusts the inventory by a delta (can be positive or negative)
 func (s *productService) AdjustInventory(ctx context.Context, clientID uuid.UUID, variantID uuid.UUID, delta int) error {
+	// Get current variant
 	variant, err := s.repo.GetVariantByID(ctx, clientID, variantID)
 	if err != nil {
 		return fmt.Errorf("failed to get variant: %w", err)
@@ -411,8 +429,25 @@ func (s *productService) AdjustInventory(ctx context.Context, clientID uuid.UUID
 		return fmt.Errorf("insufficient inventory: current=%d, delta=%d, result would be negative", variant.Quantity, delta)
 	}
 
+	// Update inventory
 	if err := s.repo.UpdateInventory(ctx, clientID, variantID, newQuantity); err != nil {
 		return fmt.Errorf("failed to adjust inventory: %w", err)
+	}
+
+	// Create movement record
+	movement := &models.InventoryMovement{
+		ClientID:         clientID,
+		VariantID:        variantID,
+		ShopID:           variant.ShopID,
+		MovementType:     models.MovementTypeAdjustment,
+		Quantity:         delta,
+		PreviousQuantity: variant.Quantity,
+		NewQuantity:      newQuantity,
+		ReferenceType:    "manual_adjustment",
+		Notes:            "Manual inventory adjustment",
+	}
+	if err := s.movementRepo.Create(ctx, movement); err != nil {
+		return fmt.Errorf("failed to create movement record: %w", err)
 	}
 
 	return nil
@@ -425,8 +460,33 @@ func (s *productService) SetInventory(ctx context.Context, clientID uuid.UUID, v
 		return fmt.Errorf("inventory quantity cannot be negative: %d", quantity)
 	}
 
+	// Get current quantity for movement record
+	variant, err := s.repo.GetVariantByID(ctx, clientID, variantID)
+	if err != nil {
+		return fmt.Errorf("failed to get variant: %w", err)
+	}
+
+	delta := quantity - variant.Quantity
+
+	// Update inventory
 	if err := s.repo.UpdateInventory(ctx, clientID, variantID, quantity); err != nil {
 		return fmt.Errorf("failed to set inventory: %w", err)
+	}
+
+	// Create movement record
+	movement := &models.InventoryMovement{
+		ClientID:         clientID,
+		VariantID:        variantID,
+		ShopID:           variant.ShopID,
+		MovementType:     models.MovementTypeAdjustment,
+		Quantity:         delta,
+		PreviousQuantity: variant.Quantity,
+		NewQuantity:      quantity,
+		ReferenceType:    "manual_set",
+		Notes:            "Manual inventory set",
+	}
+	if err := s.movementRepo.Create(ctx, movement); err != nil {
+		return fmt.Errorf("failed to create movement record: %w", err)
 	}
 
 	return nil
@@ -440,4 +500,152 @@ func (s *productService) CheckStock(ctx context.Context, clientID uuid.UUID, var
 	}
 
 	return variant.Quantity, nil
+}
+// Inventory movement request types
+
+type RecordMovementRequest struct {
+	ClientID         uuid.UUID
+	VariantID        uuid.UUID
+	ShopID           uuid.UUID
+	MovementType     models.InventoryMovementType
+	Quantity         int
+	ReferenceType    string
+	ReferenceID      *uuid.UUID
+	Notes            string
+	PerformedBy      *uuid.UUID
+}
+
+type SetInventoryAlertRequest struct {
+	ReorderPoint      int
+	ReorderQuantity   int
+	LowStockThreshold int
+	IsEnabled         bool
+}
+
+// RecordMovement creates a manual inventory movement record
+func (s *productService) RecordMovement(ctx context.Context, req *RecordMovementRequest) (*models.InventoryMovement, error) {
+	// Get current variant to calculate previous and new quantities
+	variant, err := s.repo.GetVariantByID(ctx, req.ClientID, req.VariantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get variant: %w", err)
+	}
+
+	previousQuantity := variant.Quantity
+	newQuantity := previousQuantity + req.Quantity
+
+	// Business rule: Inventory cannot go negative
+	if newQuantity < 0 {
+		return nil, fmt.Errorf("insufficient inventory: current=%d, change=%d, result would be negative", previousQuantity, req.Quantity)
+	}
+
+	// Update variant quantity
+	if err := s.repo.UpdateInventory(ctx, req.ClientID, req.VariantID, newQuantity); err != nil {
+		return nil, fmt.Errorf("failed to update inventory: %w", err)
+	}
+
+	// Create movement record
+	movement := &models.InventoryMovement{
+		ClientID:         req.ClientID,
+		VariantID:        req.VariantID,
+		ShopID:           req.ShopID,
+		MovementType:     req.MovementType,
+		Quantity:         req.Quantity,
+		PreviousQuantity: previousQuantity,
+		NewQuantity:      newQuantity,
+		ReferenceType:    req.ReferenceType,
+		ReferenceID:      req.ReferenceID,
+		Notes:            req.Notes,
+		PerformedBy:      req.PerformedBy,
+	}
+
+	if err := s.movementRepo.Create(ctx, movement); err != nil {
+		return nil, fmt.Errorf("failed to create movement: %w", err)
+	}
+
+	return movement, nil
+}
+
+// GetMovementHistory retrieves inventory movement history for a variant
+func (s *productService) GetMovementHistory(ctx context.Context, clientID uuid.UUID, variantID uuid.UUID, page, pageSize int) ([]*models.InventoryMovement, int, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+
+	offset := (page - 1) * pageSize
+
+	movements, err := s.movementRepo.ListByVariant(ctx, clientID, variantID, pageSize, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get movement history: %w", err)
+	}
+
+	total := len(movements)
+
+	return movements, total, nil
+}
+
+// SetInventoryAlert creates or updates an inventory alert for a variant
+func (s *productService) SetInventoryAlert(ctx context.Context, clientID uuid.UUID, variantID uuid.UUID, shopID uuid.UUID, req *SetInventoryAlertRequest) (*models.InventoryAlert, error) {
+	// Check if alert already exists
+	existingAlert, err := s.alertRepo.GetByVariant(ctx, clientID, variantID, shopID)
+	if err == nil && existingAlert != nil {
+		// Update existing alert
+		existingAlert.ReorderPoint = req.ReorderPoint
+		existingAlert.ReorderQuantity = req.ReorderQuantity
+		existingAlert.LowStockThreshold = req.LowStockThreshold
+		existingAlert.IsEnabled = req.IsEnabled
+
+		if err := s.alertRepo.Update(ctx, existingAlert); err != nil {
+			return nil, fmt.Errorf("failed to update inventory alert: %w", err)
+		}
+
+		return existingAlert, nil
+	}
+
+	// Create new alert
+	alert := &models.InventoryAlert{
+		ClientID:          clientID,
+		VariantID:         variantID,
+		ShopID:            shopID,
+		ReorderPoint:      req.ReorderPoint,
+		ReorderQuantity:   req.ReorderQuantity,
+		LowStockThreshold: req.LowStockThreshold,
+		IsEnabled:         req.IsEnabled,
+	}
+
+	if err := s.alertRepo.Create(ctx, alert); err != nil {
+		return nil, fmt.Errorf("failed to create inventory alert: %w", err)
+	}
+
+	return alert, nil
+}
+
+// GetInventoryAlert retrieves the inventory alert for a variant
+func (s *productService) GetInventoryAlert(ctx context.Context, clientID uuid.UUID, variantID uuid.UUID, shopID uuid.UUID) (*models.InventoryAlert, error) {
+	alert, err := s.alertRepo.GetByVariant(ctx, clientID, variantID, shopID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get inventory alert: %w", err)
+	}
+
+	return alert, nil
+}
+
+// CheckLowStockAlerts retrieves all low stock alerts for a shop
+func (s *productService) CheckLowStockAlerts(ctx context.Context, clientID uuid.UUID, shopID uuid.UUID) ([]*models.InventoryAlert, error) {
+	alerts, err := s.alertRepo.ListTriggered(ctx, clientID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get low stock alerts: %w", err)
+	}
+
+	// Filter by shop
+	var shopAlerts []*models.InventoryAlert
+	for _, alert := range alerts {
+		if alert.ShopID == shopID {
+			shopAlerts = append(shopAlerts, alert)
+		}
+	}
+
+	return shopAlerts, nil
 }
