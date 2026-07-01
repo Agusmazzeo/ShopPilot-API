@@ -13,6 +13,7 @@ import (
 	"github.com/yourorg/shoppilot/app/config"
 	"github.com/yourorg/shoppilot/app/redis"
 	"github.com/yourorg/shoppilot/app/repositories"
+	"github.com/yourorg/shoppilot/internal/services"
 )
 
 // Server represents the HTTP server
@@ -20,15 +21,24 @@ type Server struct {
 	cfg         *config.Config
 	repoManager *repositories.RepositoryManager
 	redisClient *redis.Client
+	authService services.AuthServiceI
 	httpServer  *http.Server
 }
 
 // New creates a new server instance
 func New(cfg *config.Config, repoManager *repositories.RepositoryManager, redisClient *redis.Client) *Server {
+	// Initialize auth service
+	authService := services.NewAuthService(
+		repoManager.PlatformUsers,
+		cfg.JWT.Secret,
+		cfg.JWT.Expiration,
+	)
+
 	return &Server{
 		cfg:         cfg,
 		repoManager: repoManager,
 		redisClient: redisClient,
+		authService: authService,
 	}
 }
 
