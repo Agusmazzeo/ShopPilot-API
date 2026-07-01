@@ -129,8 +129,18 @@ func (c *Config) Validate() error {
 	if c.Database.ConnectionString == "" {
 		return fmt.Errorf("DATABASE_URL is required")
 	}
-	if c.JWT.Secret == "change-me-in-production" {
+	// In production, JWT_SECRET must be set to a secure value
+	if c.JWT.Secret == "change-me-in-production" || c.JWT.Secret == "" {
+		// Only allow default in development
+		env := os.Getenv("APP_ENV")
+		if env == "production" || env == "prod" {
+			return fmt.Errorf("JWT_SECRET must be set to a secure value in production")
+		}
 		fmt.Println("WARNING: Using default JWT secret. Set JWT_SECRET in production!")
+	}
+	// Validate minimum secret length for security
+	if len(c.JWT.Secret) < 32 {
+		fmt.Println("WARNING: JWT_SECRET should be at least 32 characters for security")
 	}
 	return nil
 }
