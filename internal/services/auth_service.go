@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/yourorg/shoppilot/app/repositories"
 	"github.com/yourorg/shoppilot/internal/models"
 	"github.com/yourorg/shoppilot/internal/utils"
@@ -13,9 +13,8 @@ import (
 )
 
 var (
-	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrUserNotActive      = errors.New("user account is not active")
-	ErrInvalidToken       = errors.New("invalid token")
+	ErrUserNotActive = errors.New("user account is not active")
+	ErrInvalidToken  = errors.New("invalid token")
 )
 
 // LoginResult represents the result of a successful login
@@ -59,7 +58,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*Login
 	// Try to find PlatformUser
 	platformUser, err := s.platformUserRepo.GetByEmail(ctx, email)
 	if err != nil {
-		if errors.Is(err, repositories.ErrNotFound) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			// TODO: Try ClientUser if PlatformUser not found
 			return nil, ErrInvalidCredentials
 		}
