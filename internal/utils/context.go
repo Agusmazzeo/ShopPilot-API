@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
 	"github.com/yourorg/shoppilot/internal/models"
@@ -43,4 +44,29 @@ func HasPermissionInContext(ctx context.Context, resource, action string) bool {
 		}
 	}
 	return false
+}
+
+// GetClientIDFromContext extracts the client ID from the authenticated user
+// Returns error if user is a platform user (no client context)
+func GetClientIDFromContext(ctx context.Context) (uuid.UUID, error) {
+	user, ok := GetUserFromContext(ctx)
+	if !ok {
+		return uuid.Nil, errors.New("no authenticated user in context")
+	}
+
+	if user.ClientID == nil {
+		return uuid.Nil, errors.New("user has no client context")
+	}
+
+	return *user.ClientID, nil
+}
+
+// MustGetClientIDFromContext extracts client ID or panics
+// Use only in handlers where client context is guaranteed
+func MustGetClientIDFromContext(ctx context.Context) uuid.UUID {
+	clientID, err := GetClientIDFromContext(ctx)
+	if err != nil {
+		panic(err) // Will be caught by recovery middleware
+	}
+	return clientID
 }

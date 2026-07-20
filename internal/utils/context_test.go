@@ -68,3 +68,73 @@ func TestHasPermissionInContext_NoUser(t *testing.T) {
 	ctx := context.Background()
 	assert.False(t, HasPermissionInContext(ctx, "users", "read"))
 }
+
+func TestGetClientIDFromContext(t *testing.T) {
+	clientID := uuid.New()
+	user := &models.AuthUser{
+		ID:       uuid.New(),
+		Email:    "client@example.com",
+		Username: "clientuser",
+		ClientID: &clientID,
+	}
+
+	ctx := context.WithValue(context.Background(), UserContextKey, user)
+
+	retrievedClientID, err := GetClientIDFromContext(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, clientID, retrievedClientID)
+}
+
+func TestGetClientIDFromContext_NoUser(t *testing.T) {
+	ctx := context.Background()
+
+	clientID, err := GetClientIDFromContext(ctx)
+	assert.Error(t, err)
+	assert.Equal(t, "no authenticated user in context", err.Error())
+	assert.Equal(t, uuid.Nil, clientID)
+}
+
+func TestGetClientIDFromContext_PlatformUser(t *testing.T) {
+	user := &models.AuthUser{
+		ID:       uuid.New(),
+		Email:    "platform@example.com",
+		Username: "platformuser",
+		ClientID: nil, // Platform user has no client context
+	}
+
+	ctx := context.WithValue(context.Background(), UserContextKey, user)
+
+	clientID, err := GetClientIDFromContext(ctx)
+	assert.Error(t, err)
+	assert.Equal(t, "user has no client context", err.Error())
+	assert.Equal(t, uuid.Nil, clientID)
+}
+
+func TestMustGetClientIDFromContext(t *testing.T) {
+	clientID := uuid.New()
+	user := &models.AuthUser{
+		ID:       uuid.New(),
+		Email:    "client@example.com",
+		ClientID: &clientID,
+	}
+
+	ctx := context.WithValue(context.Background(), UserContextKey, user)
+
+	retrievedClientID := MustGetClientIDFromContext(ctx)
+	assert.Equal(t, clientID, retrievedClientID)
+}
+
+func TestMustGetClientIDFromContext_Panic(t *testing.T) {
+	// Platform user with no client context should panic
+	user := &models.AuthUser{
+		ID:       uuid.New(),
+		Email:    "platform@example.com",
+		ClientID: nil,
+	}
+
+	ctx := context.WithValue(context.Background(), UserContextKey, user)
+
+	assert.Panics(t, func() {
+		MustGetClientIDFromContext(ctx)
+	})
+}

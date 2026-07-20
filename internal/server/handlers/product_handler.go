@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/yourorg/shoppilot/internal/models"
 	"github.com/yourorg/shoppilot/internal/services"
+	"github.com/yourorg/shoppilot/internal/utils"
 )
 
 // ProductHandler handles product-related HTTP requests
@@ -97,12 +98,11 @@ type SetInventoryAlertRequestDTO struct {
 
 // Product handlers
 
-// Create handles POST /api/v1/clients/:clientId/products
+// Create handles POST /api/v1/products
 func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
@@ -146,15 +146,15 @@ func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Get handles GET /api/v1/clients/:clientId/products/:id
+// Get handles GET /api/v1/products/:id
 func (h *ProductHandler) Get(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	productID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_PRODUCT_ID", "Invalid product ID format")
@@ -173,15 +173,15 @@ func (h *ProductHandler) Get(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Update handles PUT /api/v1/clients/:clientId/products/:id
+// Update handles PUT /api/v1/products/:id
 func (h *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	productID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_PRODUCT_ID", "Invalid product ID format")
@@ -212,15 +212,15 @@ func (h *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Delete handles DELETE /api/v1/clients/:clientId/products/:id
+// Delete handles DELETE /api/v1/products/:id
 func (h *ProductHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	productID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_PRODUCT_ID", "Invalid product ID format")
@@ -238,18 +238,17 @@ func (h *ProductHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// List handles GET /api/v1/clients/:clientId/products
+// List handles GET /api/v1/products
 func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
 	// Parse query parameters
 	page := h.getIntQueryParam(r, "page", 1)
-	pageSize := h.getIntQueryParam(r, "pageSize", 20)
+	pageSize := h.getIntQueryParam(r, "page_size", 20)
 
 	// Optional shop filter
 	var shopID *uuid.UUID
@@ -282,12 +281,11 @@ func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Search handles GET /api/v1/clients/:clientId/products/search
+// Search handles GET /api/v1/products/search
 func (h *ProductHandler) Search(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
@@ -298,7 +296,7 @@ func (h *ProductHandler) Search(w http.ResponseWriter, r *http.Request) {
 	}
 
 	page := h.getIntQueryParam(r, "page", 1)
-	pageSize := h.getIntQueryParam(r, "pageSize", 20)
+	pageSize := h.getIntQueryParam(r, "page_size", 20)
 
 	products, total, err := h.service.SearchProducts(r.Context(), clientID, query, page, pageSize)
 	if err != nil {
@@ -322,15 +320,15 @@ func (h *ProductHandler) Search(w http.ResponseWriter, r *http.Request) {
 
 // Variant handlers
 
-// CreateVariant handles POST /api/v1/clients/:clientId/products/:productId/variants
+// CreateVariant handles POST /api/v1/products/:productId/variants
 func (h *ProductHandler) CreateVariant(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	productID, err := uuid.Parse(vars["productId"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_PRODUCT_ID", "Invalid product ID format")
@@ -376,15 +374,15 @@ func (h *ProductHandler) CreateVariant(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GetVariant handles GET /api/v1/clients/:clientId/variants/:id
+// GetVariant handles GET /api/v1/variants/:id
 func (h *ProductHandler) GetVariant(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	variantID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_VARIANT_ID", "Invalid variant ID format")
@@ -403,15 +401,15 @@ func (h *ProductHandler) GetVariant(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// UpdateVariant handles PUT /api/v1/clients/:clientId/variants/:id
+// UpdateVariant handles PUT /api/v1/variants/:id
 func (h *ProductHandler) UpdateVariant(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	variantID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_VARIANT_ID", "Invalid variant ID format")
@@ -449,15 +447,15 @@ func (h *ProductHandler) UpdateVariant(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// DeleteVariant handles DELETE /api/v1/clients/:clientId/variants/:id
+// DeleteVariant handles DELETE /api/v1/variants/:id
 func (h *ProductHandler) DeleteVariant(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	variantID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_VARIANT_ID", "Invalid variant ID format")
@@ -475,15 +473,15 @@ func (h *ProductHandler) DeleteVariant(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ListVariants handles GET /api/v1/clients/:clientId/products/:productId/variants
+// ListVariants handles GET /api/v1/products/:productId/variants
 func (h *ProductHandler) ListVariants(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	productID, err := uuid.Parse(vars["productId"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_PRODUCT_ID", "Invalid product ID format")
@@ -504,15 +502,15 @@ func (h *ProductHandler) ListVariants(w http.ResponseWriter, r *http.Request) {
 
 // Inventory handlers
 
-// AdjustInventory handles POST /api/v1/clients/:clientId/variants/:id/inventory/adjust
+// AdjustInventory handles POST /api/v1/variants/:id/inventory/adjust
 func (h *ProductHandler) AdjustInventory(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	variantID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_VARIANT_ID", "Invalid variant ID format")
@@ -536,15 +534,15 @@ func (h *ProductHandler) AdjustInventory(w http.ResponseWriter, r *http.Request)
 	})
 }
 
-// SetInventory handles PUT /api/v1/clients/:clientId/variants/:id/inventory
+// SetInventory handles PUT /api/v1/variants/:id/inventory
 func (h *ProductHandler) SetInventory(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	variantID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_VARIANT_ID", "Invalid variant ID format")
@@ -568,15 +566,15 @@ func (h *ProductHandler) SetInventory(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// CheckStock handles GET /api/v1/clients/:clientId/variants/:id/inventory
+// CheckStock handles GET /api/v1/variants/:id/inventory
 func (h *ProductHandler) CheckStock(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	variantID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_VARIANT_ID", "Invalid variant ID format")
@@ -597,15 +595,15 @@ func (h *ProductHandler) CheckStock(w http.ResponseWriter, r *http.Request) {
 
 // Inventory movement handlers
 
-// GetMovements handles GET /api/v1/clients/:clientId/variants/:id/movements
+// GetMovements handles GET /api/v1/variants/:id/movements
 func (h *ProductHandler) GetMovements(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	variantID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_VARIANT_ID", "Invalid variant ID format")
@@ -618,7 +616,7 @@ func (h *ProductHandler) GetMovements(w http.ResponseWriter, r *http.Request) {
 		page = 1
 	}
 
-	pageSize, _ := strconv.Atoi(r.URL.Query().Get("pageSize"))
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
 	if pageSize < 1 {
 		pageSize = 20
 	}
@@ -638,15 +636,15 @@ func (h *ProductHandler) GetMovements(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// RecordMovement handles POST /api/v1/clients/:clientId/variants/:id/movements
+// RecordMovement handles POST /api/v1/variants/:id/movements
 func (h *ProductHandler) RecordMovement(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	variantID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_VARIANT_ID", "Invalid variant ID format")
@@ -718,15 +716,15 @@ func (h *ProductHandler) RecordMovement(w http.ResponseWriter, r *http.Request) 
 
 // Inventory alert handlers
 
-// SetAlert handles PUT /api/v1/clients/:clientId/variants/:id/alerts
+// SetAlert handles PUT /api/v1/variants/:id/alerts
 func (h *ProductHandler) SetAlert(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	variantID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_VARIANT_ID", "Invalid variant ID format")
@@ -771,15 +769,15 @@ func (h *ProductHandler) SetAlert(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GetAlert handles GET /api/v1/clients/:clientId/variants/:id/alerts
+// GetAlert handles GET /api/v1/variants/:id/alerts
 func (h *ProductHandler) GetAlert(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	variantID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_VARIANT_ID", "Invalid variant ID format")
@@ -811,15 +809,15 @@ func (h *ProductHandler) GetAlert(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GetLowStock handles GET /api/v1/clients/:clientId/shops/:shopId/low-stock
+// GetLowStock handles GET /api/v1/shops/:shopId/low-stock
 func (h *ProductHandler) GetLowStock(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	shopID, err := uuid.Parse(vars["shopId"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_SHOP_ID", "Invalid shop ID format")

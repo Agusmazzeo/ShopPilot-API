@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/yourorg/shoppilot/internal/services"
+	"github.com/yourorg/shoppilot/internal/utils"
 )
 
 // ClientUserHandler handles HTTP requests for client users
@@ -61,12 +62,11 @@ type ClientUserResponse struct {
 	UpdatedAt    string  `json:"updated_at"`
 }
 
-// Create handles POST /api/v1/clients/:clientId/users
+// Create handles POST /api/v1/users
 func (h *ClientUserHandler) Create(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
@@ -114,7 +114,7 @@ func (h *ClientUserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Get handles GET /api/v1/clients/:clientId/users/:id
+// Get handles GET /api/v1/users/:id
 func (h *ClientUserHandler) Get(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID, err := uuid.Parse(vars["id"])
@@ -149,7 +149,7 @@ func (h *ClientUserHandler) Get(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Update handles PUT /api/v1/clients/:clientId/users/:id
+// Update handles PUT /api/v1/users/:id
 func (h *ClientUserHandler) Update(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID, err := uuid.Parse(vars["id"])
@@ -186,7 +186,7 @@ func (h *ClientUserHandler) Update(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Delete handles DELETE /api/v1/clients/:clientId/users/:id
+// Delete handles DELETE /api/v1/users/:id
 func (h *ClientUserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID, err := uuid.Parse(vars["id"])
@@ -206,12 +206,11 @@ func (h *ClientUserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// List handles GET /api/v1/clients/:clientId/users
+// List handles GET /api/v1/users
 func (h *ClientUserHandler) List(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
@@ -269,7 +268,7 @@ func (h *ClientUserHandler) List(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// AssignRole handles POST /api/v1/clients/:clientId/users/:id/roles
+// AssignRole handles POST /api/v1/users/:id/roles
 func (h *ClientUserHandler) AssignRole(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID, err := uuid.Parse(vars["id"])
@@ -295,7 +294,7 @@ func (h *ClientUserHandler) AssignRole(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// RemoveRole handles DELETE /api/v1/clients/:clientId/users/:id/roles/:roleId
+// RemoveRole handles DELETE /api/v1/users/:id/roles/:roleId
 func (h *ClientUserHandler) RemoveRole(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID, err := uuid.Parse(vars["id"])

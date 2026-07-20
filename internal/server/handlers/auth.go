@@ -27,8 +27,9 @@ type LoginRequest struct {
 
 // LoginResponse represents the login response payload
 type LoginResponse struct {
-	Token string      `json:"token"`
-	User  interface{} `json:"user"`
+	Token        string      `json:"token"`
+	RefreshToken string      `json:"refreshToken"`
+	User         interface{} `json:"user"`
 }
 
 // RefreshTokenRequest represents the refresh token request payload
@@ -70,8 +71,9 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := LoginResponse{
-		Token: loginResult.Token,
-		User:  loginResult.User,
+		Token:        loginResult.Token,
+		RefreshToken: loginResult.Token, // placeholder: auth service does not yet return a distinct refresh token
+		User:         loginResult.User,
 	}
 
 	writeJSONResponse(w, http.StatusOK, response)

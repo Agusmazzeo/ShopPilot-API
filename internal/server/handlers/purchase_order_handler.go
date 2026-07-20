@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/yourorg/shoppilot/internal/models"
 	"github.com/yourorg/shoppilot/internal/services"
+	"github.com/yourorg/shoppilot/internal/utils"
 )
 
 // PurchaseOrderHandler handles purchase order-related HTTP requests
@@ -68,10 +69,9 @@ type ReceiveItemRequestDTO struct {
 
 // Create handles POST /api/v1/clients/:clientId/purchase-orders
 func (h *PurchaseOrderHandler) Create(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
@@ -143,13 +143,13 @@ func (h *PurchaseOrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 // Get handles GET /api/v1/clients/:clientId/purchase-orders/:id
 func (h *PurchaseOrderHandler) Get(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	poID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_PO_ID", "Invalid purchase order ID format")
@@ -170,13 +170,13 @@ func (h *PurchaseOrderHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 // Update handles PUT /api/v1/clients/:clientId/purchase-orders/:id
 func (h *PurchaseOrderHandler) Update(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	poID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_PO_ID", "Invalid purchase order ID format")
@@ -208,13 +208,13 @@ func (h *PurchaseOrderHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 // Delete handles DELETE /api/v1/clients/:clientId/purchase-orders/:id
 func (h *PurchaseOrderHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	poID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_PO_ID", "Invalid purchase order ID format")
@@ -234,10 +234,9 @@ func (h *PurchaseOrderHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 // List handles GET /api/v1/clients/:clientId/purchase-orders
 func (h *PurchaseOrderHandler) List(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
@@ -247,7 +246,7 @@ func (h *PurchaseOrderHandler) List(w http.ResponseWriter, r *http.Request) {
 		page = 1
 	}
 
-	pageSize, _ := strconv.Atoi(r.URL.Query().Get("pageSize"))
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
 	if pageSize < 1 {
 		pageSize = 20
 	}
@@ -286,22 +285,25 @@ func (h *PurchaseOrderHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, APIResponse{
 		Success: true,
-		Data: map[string]interface{}{
-			"purchaseOrders": purchaseOrders,
-			"pagination":     map[string]int{"page": page, "pageSize": pageSize, "total": total},
+		Data:    purchaseOrders,
+		Meta: &Meta{
+			Page:       page,
+			PageSize:   pageSize,
+			Total:      total,
+			TotalPages: (total + pageSize - 1) / pageSize,
 		},
 	})
 }
 
 // Submit handles POST /api/v1/clients/:clientId/purchase-orders/:id/submit
 func (h *PurchaseOrderHandler) Submit(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	poID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_PO_ID", "Invalid purchase order ID format")
@@ -321,13 +323,13 @@ func (h *PurchaseOrderHandler) Submit(w http.ResponseWriter, r *http.Request) {
 
 // Cancel handles POST /api/v1/clients/:clientId/purchase-orders/:id/cancel
 func (h *PurchaseOrderHandler) Cancel(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	poID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_PO_ID", "Invalid purchase order ID format")
@@ -347,13 +349,13 @@ func (h *PurchaseOrderHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 
 // AddItem handles POST /api/v1/clients/:clientId/purchase-orders/:id/items
 func (h *PurchaseOrderHandler) AddItem(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	poID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_PO_ID", "Invalid purchase order ID format")
@@ -399,13 +401,13 @@ func (h *PurchaseOrderHandler) AddItem(w http.ResponseWriter, r *http.Request) {
 
 // RemoveItem handles DELETE /api/v1/clients/:clientId/purchase-orders/:id/items/:itemId
 func (h *PurchaseOrderHandler) RemoveItem(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	poID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_PO_ID", "Invalid purchase order ID format")
@@ -431,13 +433,13 @@ func (h *PurchaseOrderHandler) RemoveItem(w http.ResponseWriter, r *http.Request
 
 // ListItems handles GET /api/v1/clients/:clientId/purchase-orders/:id/items
 func (h *PurchaseOrderHandler) ListItems(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	poID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_PO_ID", "Invalid purchase order ID format")
@@ -452,19 +454,19 @@ func (h *PurchaseOrderHandler) ListItems(w http.ResponseWriter, r *http.Request)
 
 	writeJSON(w, http.StatusOK, APIResponse{
 		Success: true,
-		Data:    map[string]interface{}{"items": items},
+		Data:    items,
 	})
 }
 
 // Receive handles POST /api/v1/clients/:clientId/purchase-orders/:id/receive
 func (h *PurchaseOrderHandler) Receive(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	poID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_PO_ID", "Invalid purchase order ID format")

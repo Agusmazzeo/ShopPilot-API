@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/yourorg/shoppilot/internal/models"
 	"github.com/yourorg/shoppilot/internal/services"
+	"github.com/yourorg/shoppilot/internal/utils"
 )
 
 // SupplierHandler handles supplier-related HTTP requests
@@ -62,12 +63,11 @@ type UpdateSupplierRequestDTO struct {
 
 // Supplier handlers
 
-// Create handles POST /api/v1/clients/:clientId/suppliers
+// Create handles POST /api/v1/suppliers
 func (h *SupplierHandler) Create(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
@@ -113,15 +113,15 @@ func (h *SupplierHandler) Create(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Get handles GET /api/v1/clients/:clientId/suppliers/:id
+// Get handles GET /api/v1/suppliers/:id
 func (h *SupplierHandler) Get(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	supplierID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_SUPPLIER_ID", "Invalid supplier ID format")
@@ -140,15 +140,15 @@ func (h *SupplierHandler) Get(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Update handles PUT /api/v1/clients/:clientId/suppliers/:id
+// Update handles PUT /api/v1/suppliers/:id
 func (h *SupplierHandler) Update(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	supplierID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_SUPPLIER_ID", "Invalid supplier ID format")
@@ -189,15 +189,15 @@ func (h *SupplierHandler) Update(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Delete handles DELETE /api/v1/clients/:clientId/suppliers/:id
+// Delete handles DELETE /api/v1/suppliers/:id
 func (h *SupplierHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	supplierID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_SUPPLIER_ID", "Invalid supplier ID format")
@@ -215,12 +215,11 @@ func (h *SupplierHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// List handles GET /api/v1/clients/:clientId/suppliers
+// List handles GET /api/v1/suppliers
 func (h *SupplierHandler) List(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
@@ -230,7 +229,7 @@ func (h *SupplierHandler) List(w http.ResponseWriter, r *http.Request) {
 		page = 1
 	}
 
-	pageSize, _ := strconv.Atoi(r.URL.Query().Get("pageSize"))
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
 	if pageSize < 1 {
 		pageSize = 20
 	}

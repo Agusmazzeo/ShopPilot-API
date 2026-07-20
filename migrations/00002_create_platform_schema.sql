@@ -54,16 +54,16 @@ CREATE INDEX idx_platform_permissions_resource ON platform_permissions(resource)
 CREATE INDEX idx_platform_permissions_action ON platform_permissions(action);
 
 INSERT INTO platform_permissions (name, description, resource, action) VALUES
-    ('create_client', 'Create new clients', 'client', 'create'),
-    ('read_client', 'View client details', 'client', 'read'),
-    ('update_client', 'Update client information', 'client', 'update'),
-    ('delete_client', 'Delete clients', 'client', 'delete'),
-    ('manage_client_users', 'Manage users within a client', 'client_user', 'manage'),
-    ('view_platform_users', 'View platform admin users', 'platform_user', 'read'),
-    ('create_platform_user', 'Create platform admin users', 'platform_user', 'create'),
-    ('update_platform_user', 'Update platform admin users', 'platform_user', 'update'),
-    ('delete_platform_user', 'Delete platform admin users', 'platform_user', 'delete'),
-    ('manage_platform_roles', 'Manage platform roles and permissions', 'platform_role', 'manage');
+    ('create_client', 'Create new clients', 'clients', 'create'),
+    ('read_client', 'View client details', 'clients', 'read'),
+    ('update_client', 'Update client information', 'clients', 'update'),
+    ('delete_client', 'Delete clients', 'clients', 'delete'),
+    ('manage_client_users', 'Manage users within a clients', 'client_users', 'manage'),
+    ('view_platform_users', 'View platform admin users', 'platform_users', 'read'),
+    ('create_platform_user', 'Create platform admin users', 'platform_users', 'create'),
+    ('update_platform_user', 'Update platform admin users', 'platform_users', 'update'),
+    ('delete_platform_user', 'Delete platform admin users', 'platform_users', 'delete'),
+    ('manage_platform_roles', 'Manage platform roles and permissions', 'platform_roles', 'manage');
 
 -- Platform roles
 CREATE TABLE platform_roles (

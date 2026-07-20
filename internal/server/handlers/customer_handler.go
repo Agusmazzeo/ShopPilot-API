@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/yourorg/shoppilot/internal/services"
+	"github.com/yourorg/shoppilot/internal/utils"
 )
 
 // CustomerHandler handles customer-related HTTP requests
@@ -69,12 +70,11 @@ type UpdateCustomerRequestDTO struct {
 
 // Customer handlers
 
-// Create handles POST /api/v1/clients/:clientId/customers
+// Create handles POST /api/v1/customers
 func (h *CustomerHandler) Create(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
@@ -124,15 +124,15 @@ func (h *CustomerHandler) Create(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Get handles GET /api/v1/clients/:clientId/customers/:id
+// Get handles GET /api/v1/customers/:id
 func (h *CustomerHandler) Get(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	customerID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_CUSTOMER_ID", "Invalid customer ID format")
@@ -151,15 +151,15 @@ func (h *CustomerHandler) Get(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Update handles PUT /api/v1/clients/:clientId/customers/:id
+// Update handles PUT /api/v1/customers/:id
 func (h *CustomerHandler) Update(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	customerID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_CUSTOMER_ID", "Invalid customer ID format")
@@ -204,15 +204,15 @@ func (h *CustomerHandler) Update(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Delete handles DELETE /api/v1/clients/:clientId/customers/:id
+// Delete handles DELETE /api/v1/customers/:id
 func (h *CustomerHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
+	vars := mux.Vars(r)
 	customerID, err := uuid.Parse(vars["id"])
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_CUSTOMER_ID", "Invalid customer ID format")
@@ -230,12 +230,11 @@ func (h *CustomerHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// List handles GET /api/v1/clients/:clientId/customers
+// List handles GET /api/v1/customers
 func (h *CustomerHandler) List(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
@@ -245,7 +244,7 @@ func (h *CustomerHandler) List(w http.ResponseWriter, r *http.Request) {
 		page = 1
 	}
 
-	pageSize, _ := strconv.Atoi(r.URL.Query().Get("pageSize"))
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
 	if pageSize < 1 {
 		pageSize = 20
 	}
@@ -265,12 +264,11 @@ func (h *CustomerHandler) List(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Search handles GET /api/v1/clients/:clientId/customers/search
+// Search handles GET /api/v1/customers/search
 func (h *CustomerHandler) Search(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clientID, err := uuid.Parse(vars["clientId"])
+	clientID, err := utils.GetClientIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "INVALID_CLIENT_ID", "Invalid client ID format")
+		writeError(w, http.StatusUnauthorized, "NO_CLIENT_CONTEXT", err.Error())
 		return
 	}
 
@@ -287,7 +285,7 @@ func (h *CustomerHandler) Search(w http.ResponseWriter, r *http.Request) {
 		page = 1
 	}
 
-	pageSize, _ := strconv.Atoi(r.URL.Query().Get("pageSize"))
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
 	if pageSize < 1 {
 		pageSize = 20
 	}
