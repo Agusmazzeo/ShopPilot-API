@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -317,14 +318,17 @@ func (r *platformUserRepository) RemoveRole(ctx context.Context, userID uuid.UUI
 	return nil
 }
 
-// GetUserRoles retrieves all roles assigned to a platform user
+// GetUserRoles retrieves all roles assigned to a platform user, including their permissions.
 func (r *platformUserRepository) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*models.PlatformRole, error) {
 	query := `
-		SELECT r.id, r.name, r.description, r.is_system_role, r.created_at, r.updated_at
+		SELECT r.id, r.name, r.description, r.is_system_role, r.created_at, r.updated_at,
+		       p.id, p.name, p.description, p.resource, p.action, p.created_at
 		FROM platform_roles r
 		INNER JOIN platform_user_roles ur ON r.id = ur.role_id
+		LEFT JOIN platform_role_permissions rp ON r.id = rp.role_id
+		LEFT JOIN platform_permissions p ON rp.permission_id = p.id
 		WHERE ur.user_id = $1
-		ORDER BY r.name
+		ORDER BY r.name, p.resource, p.action
 	`
 
 	rows, err := r.pool.Query(ctx, query, userID)
@@ -333,25 +337,49 @@ func (r *platformUserRepository) GetUserRoles(ctx context.Context, userID uuid.U
 	}
 	defer rows.Close()
 
-	var roles []*models.PlatformRole
+	roleMap := make(map[int]*models.PlatformRole)
+	var roleOrder []int
+
 	for rows.Next() {
 		var role models.PlatformRole
+		var pID *int
+		var pName, pDesc, pResource, pAction *string
+		var pCreatedAt *time.Time
+
 		err := rows.Scan(
-			&role.ID,
-			&role.Name,
-			&role.Description,
-			&role.IsSystemRole,
-			&role.CreatedAt,
-			&role.UpdatedAt,
+			&role.ID, &role.Name, &role.Description, &role.IsSystemRole, &role.CreatedAt, &role.UpdatedAt,
+			&pID, &pName, &pDesc, &pResource, &pAction, &pCreatedAt,
 		)
 		if err != nil {
 			return nil, err
 		}
-		roles = append(roles, &role)
+
+		if _, exists := roleMap[role.ID]; !exists {
+			r := role
+			r.Permissions = []models.PlatformPermission{}
+			roleMap[role.ID] = &r
+			roleOrder = append(roleOrder, role.ID)
+		}
+
+		if pID != nil {
+			roleMap[role.ID].Permissions = append(roleMap[role.ID].Permissions, models.PlatformPermission{
+				ID:          *pID,
+				Name:        *pName,
+				Description: *pDesc,
+				Resource:    *pResource,
+				Action:      *pAction,
+				CreatedAt:   *pCreatedAt,
+			})
+		}
 	}
 
 	if err = rows.Err(); err != nil {
 		return nil, err
+	}
+
+	roles := make([]*models.PlatformRole, 0, len(roleOrder))
+	for _, id := range roleOrder {
+		roles = append(roles, roleMap[id])
 	}
 
 	return roles, nil

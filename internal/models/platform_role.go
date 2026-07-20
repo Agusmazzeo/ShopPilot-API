@@ -7,12 +7,13 @@ import (
 )
 
 type PlatformRole struct {
-	ID           int       `db:"id" json:"id"`
-	Name         string    `db:"name" json:"name"`
-	Description  string    `db:"description" json:"description"`
-	IsSystemRole bool      `db:"is_system_role" json:"isSystemRole"`
-	CreatedAt    time.Time `db:"created_at" json:"createdAt"`
-	UpdatedAt    time.Time `db:"updated_at" json:"updatedAt"`
+	ID           int                   `db:"id" json:"id"`
+	Name         string                `db:"name" json:"name"`
+	Description  string                `db:"description" json:"description"`
+	IsSystemRole bool                  `db:"is_system_role" json:"isSystemRole"`
+	Permissions  []PlatformPermission  `db:"-" json:"permissions"`
+	CreatedAt    time.Time             `db:"created_at" json:"createdAt"`
+	UpdatedAt    time.Time             `db:"updated_at" json:"updatedAt"`
 }
 
 type PlatformPermission struct {

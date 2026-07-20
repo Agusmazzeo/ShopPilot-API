@@ -75,8 +75,14 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*Login
 		return nil, ErrUserNotActive
 	}
 
-	// TODO: Fetch role and permissions
-	// For now, create a basic AuthUser
+	// Fetch roles and permissions in a single query
+	roles, err := s.platformUserRepo.GetUserRoles(ctx, platformUser.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	roleID, roleName := primaryRole(roles)
+
 	authUser := &models.AuthUser{
 		ID:           platformUser.ID,
 		Email:        platformUser.Email,
@@ -89,12 +95,10 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*Login
 		LastLoginAt:  platformUser.LastLoginAt,
 		CreatedAt:    platformUser.CreatedAt,
 		UpdatedAt:    platformUser.UpdatedAt,
-		ClientID:     nil, // PlatformUser
-		RoleID:       1,   // TODO: Get from database
-		RoleName:     "Admin",
-		Permissions: []models.Permission{
-			// TODO: Load from database
-		},
+		ClientID:     nil,
+		RoleID:       roleID,
+		RoleName:     roleName,
+		Permissions:  permissionsFromRoles(roles),
 	}
 
 	// Generate JWT token
@@ -127,7 +131,14 @@ func (s *AuthService) ValidateToken(ctx context.Context, token string) (*models.
 		return nil, ErrUserNotActive
 	}
 
-	// TODO: Fetch role and permissions
+	// Fetch fresh roles and permissions from DB on every request
+	roles, err := s.platformUserRepo.GetUserRoles(ctx, platformUser.ID)
+	if err != nil {
+		return nil, ErrInvalidToken
+	}
+
+	roleID, roleName := primaryRole(roles)
+
 	authUser := &models.AuthUser{
 		ID:           platformUser.ID,
 		Email:        platformUser.Email,
@@ -140,9 +151,9 @@ func (s *AuthService) ValidateToken(ctx context.Context, token string) (*models.
 		LastLoginAt:  platformUser.LastLoginAt,
 		CreatedAt:    platformUser.CreatedAt,
 		UpdatedAt:    platformUser.UpdatedAt,
-		RoleID:       claims.RoleID,
-		RoleName:     claims.RoleName,
-		Permissions:  convertPermissionClaims(claims.Permissions),
+		RoleID:       roleID,
+		RoleName:     roleName,
+		Permissions:  permissionsFromRoles(roles),
 	}
 
 	return authUser, nil
@@ -176,15 +187,33 @@ func (s *AuthService) VerifyPassword(hashedPassword, password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 }
 
-func convertPermissionClaims(claims []utils.PermissionClaim) []models.Permission {
-	permissions := make([]models.Permission, len(claims))
-	for i, claim := range claims {
-		permissions[i] = models.Permission{
-			ID:       claim.ID,
-			Name:     claim.Name,
-			Resource: claim.Resource,
-			Action:   claim.Action,
+// primaryRole returns the ID and name of the first assigned role, or zero values if none.
+func primaryRole(roles []*models.PlatformRole) (int, string) {
+	if len(roles) == 0 {
+		return 0, ""
+	}
+	return roles[0].ID, roles[0].Name
+}
+
+// permissionsFromRoles aggregates all permissions across roles into a deduplicated slice.
+func permissionsFromRoles(roles []*models.PlatformRole) []models.Permission {
+	seen := make(map[int]struct{})
+	var out []models.Permission
+	for _, role := range roles {
+		for _, p := range role.Permissions {
+			if _, ok := seen[p.ID]; ok {
+				continue
+			}
+			seen[p.ID] = struct{}{}
+			out = append(out, models.Permission{
+				ID:          p.ID,
+				Name:        p.Name,
+				Description: p.Description,
+				Resource:    p.Resource,
+				Action:      p.Action,
+				CreatedAt:   p.CreatedAt,
+			})
 		}
 	}
-	return permissions
+	return out
 }
