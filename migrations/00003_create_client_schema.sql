@@ -63,16 +63,45 @@ CREATE INDEX idx_client_permissions_resource ON client_permissions(resource);
 CREATE INDEX idx_client_permissions_action ON client_permissions(action);
 
 INSERT INTO client_permissions (name, description, resource, action) VALUES
-    ('create_shop', 'Create new shops', 'shop', 'create'),
-    ('read_shop', 'View shop details', 'shop', 'read'),
-    ('update_shop', 'Update shop information', 'shop', 'update'),
-    ('delete_shop', 'Delete shops', 'shop', 'delete'),
-    ('manage_shop_users', 'Manage users within a shop', 'shop_user', 'manage'),
-    ('create_product', 'Create new products', 'product', 'create'),
-    ('read_product', 'View product details', 'product', 'read'),
-    ('update_product', 'Update product information', 'product', 'update'),
-    ('delete_product', 'Delete products', 'product', 'delete'),
-    ('manage_inventory', 'Manage product inventory', 'inventory', 'manage');
+    -- Shops
+    ('create_shop', 'Create new shops', 'shops', 'create'),
+    ('read_shop', 'View shop details', 'shops', 'read'),
+    ('update_shop', 'Update shop information', 'shops', 'update'),
+    ('delete_shop', 'Delete shops', 'shops', 'delete'),
+    -- Client users
+    ('create_client_user', 'Create client users', 'client_users', 'create'),
+    ('read_client_user', 'View client user details', 'client_users', 'read'),
+    ('update_client_user', 'Update client user information', 'client_users', 'update'),
+    ('delete_client_user', 'Delete client users', 'client_users', 'delete'),
+    -- Products
+    ('create_product', 'Create new products', 'products', 'create'),
+    ('read_product', 'View product details', 'products', 'read'),
+    ('update_product', 'Update product information', 'products', 'update'),
+    ('delete_product', 'Delete products', 'products', 'delete'),
+    -- Inventory
+    ('read_inventory', 'View inventory levels and movements', 'inventory', 'read'),
+    ('create_inventory', 'Record inventory movements', 'inventory', 'create'),
+    ('update_inventory', 'Adjust inventory levels and alerts', 'inventory', 'update'),
+    -- Suppliers
+    ('create_supplier', 'Create new suppliers', 'suppliers', 'create'),
+    ('read_supplier', 'View supplier details', 'suppliers', 'read'),
+    ('update_supplier', 'Update supplier information', 'suppliers', 'update'),
+    ('delete_supplier', 'Delete suppliers', 'suppliers', 'delete'),
+    -- Customers
+    ('create_customer', 'Create new customers', 'customers', 'create'),
+    ('read_customer', 'View customer details', 'customers', 'read'),
+    ('update_customer', 'Update customer information', 'customers', 'update'),
+    ('delete_customer', 'Delete customers', 'customers', 'delete'),
+    -- Purchase orders
+    ('create_purchase_order', 'Create new purchase orders', 'purchase_orders', 'create'),
+    ('read_purchase_order', 'View purchase order details', 'purchase_orders', 'read'),
+    ('update_purchase_order', 'Update purchase orders', 'purchase_orders', 'update'),
+    ('delete_purchase_order', 'Delete purchase orders', 'purchase_orders', 'delete'),
+    -- Sales orders
+    ('create_sales_order', 'Create new sales orders', 'sales_orders', 'create'),
+    ('read_sales_order', 'View sales order details', 'sales_orders', 'read'),
+    ('update_sales_order', 'Update sales orders', 'sales_orders', 'update'),
+    ('delete_sales_order', 'Delete sales orders', 'sales_orders', 'delete');
 
 -- Client roles
 CREATE TABLE client_roles (
@@ -118,7 +147,10 @@ SELECT r.id, p.id
 FROM client_roles r
 CROSS JOIN client_permissions p
 WHERE r.name = 'shop_manager'
-  AND p.name IN ('create_shop', 'read_shop', 'update_shop', 'manage_shop_users');
+  AND p.name IN (
+    'create_shop', 'read_shop', 'update_shop', 'delete_shop',
+    'create_client_user', 'read_client_user', 'update_client_user', 'delete_client_user'
+  );
 
 -- Assign permissions to inventory_manager
 INSERT INTO client_role_permissions (role_id, permission_id)
@@ -126,7 +158,14 @@ SELECT r.id, p.id
 FROM client_roles r
 CROSS JOIN client_permissions p
 WHERE r.name = 'inventory_manager'
-  AND p.name IN ('read_shop', 'create_product', 'read_product', 'update_product', 'manage_inventory');
+  AND p.name IN (
+    'read_shop',
+    'create_product', 'read_product', 'update_product', 'delete_product',
+    'read_inventory', 'create_inventory', 'update_inventory',
+    'create_supplier', 'read_supplier', 'update_supplier',
+    'create_purchase_order', 'read_purchase_order', 'update_purchase_order',
+    'create_sales_order', 'read_sales_order', 'update_sales_order'
+  );
 
 -- Assign permissions to viewer
 INSERT INTO client_role_permissions (role_id, permission_id)
@@ -134,7 +173,12 @@ SELECT r.id, p.id
 FROM client_roles r
 CROSS JOIN client_permissions p
 WHERE r.name = 'viewer'
-  AND p.name IN ('read_shop', 'read_product');
+  AND p.name IN (
+    'read_shop',
+    'read_product', 'read_inventory',
+    'read_supplier', 'read_customer',
+    'read_purchase_order', 'read_sales_order'
+  );
 
 -- Client user roles junction
 CREATE TABLE client_user_roles (
